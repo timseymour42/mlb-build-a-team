@@ -4,39 +4,12 @@
 # In[1]:
 
 
-from bs4 import BeautifulSoup
 import datetime
 import pandas as pd
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import plotly.express as px
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import roc_auc_score
-from sklearn import metrics
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import LinearSVC
-import matplotlib.pyplot as plt
-from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.ensemble import AdaBoostRegressor
-from sklearn.model_selection import KFold
-from sklearn import linear_model
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-from sklearn.feature_selection import RFE
-from sklearn.linear_model import LogisticRegression
-import plotly
-from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import GradientBoostingClassifier
 from sqlalchemy import create_engine
 
 
