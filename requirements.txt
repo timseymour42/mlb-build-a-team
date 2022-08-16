@@ -1,0 +1,9 @@
+datetime
+pandas
+numpy
+seaborn
+plotly
+scikit-learn
+matplotlib
+sqlalchemy
+MySQLdb
