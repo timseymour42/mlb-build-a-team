@@ -27,8 +27,8 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     steps:
       - uses: actions/checkout@v3
-      - run: 
-          sudo service mysql start;
+      - run: |
+          sudo service mysql start
           mysql -u root -p P@ssw0rd
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       # this Action should follow steps to set up Python build environment
