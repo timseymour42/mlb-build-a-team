@@ -240,7 +240,7 @@ def collect_new_team_data(df):
 
 
 def update_game_data(sql_col_mapping):
-    db = MySQLdb.connect(host="localhost", uer='root', passwd='', db='mlb_db')
+    db = MySQLdb.connect(host="localhost", user='root', passwd='', db='mlb_db')
     # Need to load in CSV identify the most recent date, scrape from most recent date to today, append
     game_data = pd.read_sql('SELECT * FROM game_data', con = db)
     hit, pit = collect_new_team_data(game_data)
@@ -463,7 +463,7 @@ def add_new_player_data(hit_df, pit_df):
 
 
 def update_players_data(sql_col_mapping):
-    db = MySQLdb.connect(host="localhost", uer='root', passwd='', db='mlb_db')
+    db = MySQLdb.connect(host="localhost", user='root', passwd='', db='mlb_db')
     tblchk = db.cursor()
     hit_df_ = pd.read_sql('SELECT * FROM hitter_data', con = db)
     pit_df_ = pd.read_sql('SELECT * FROM pitcher_data', con = db)
@@ -586,7 +586,7 @@ def collect_team_data_yearly(year):
 
 
 def update_team_data(sql_col_mapping):
-    db = MySQLdb.connect(host="localhost", uer='root', passwd='', db='mlb_db')
+    db = MySQLdb.connect(host="localhost", user='root', passwd='', db='mlb_db')
     tblchk = db.cursor()
     # The year of the latest record in the data table
     sql_team_data = pd.read_sql('SELECT * FROM team_data', con = db)
