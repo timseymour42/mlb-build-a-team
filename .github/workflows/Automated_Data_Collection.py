@@ -584,8 +584,12 @@ def collect_team_data_yearly(year):
 
 # In[68]:
 
+import mysql.connector
 
 def update_team_data(sql_col_mapping):
+    cnx = mysql.connector.connect(user='root', password='',
+                              host='127.0.0.1',
+                              database='mlb_db')
     db = MySQLdb.connect(user='root', passwd='', db='mlb_db')
     tblchk = db.cursor()
     # The year of the latest record in the data table
