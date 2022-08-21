@@ -579,7 +579,7 @@ def collect_team_data_yearly(year):
 # In[68]:
 
 def update_team_data(sql_col_mapping):
-    engine = create_engine("mysql+pymysql://root:@localhost/mlb_db"
+    engine = create_engine("mysql+pymysql://root:@127.0.0.1:8888/mlb_db"
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
