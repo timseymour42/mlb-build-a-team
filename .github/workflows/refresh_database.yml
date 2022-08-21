@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run:  |
-          sudo service mysql start
+          sudo service mysql restart
           mysql -h 127.0.0.1 --port 8888 -u root
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       # this Action should follow steps to set up Python build environment
