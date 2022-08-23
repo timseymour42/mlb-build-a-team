@@ -234,7 +234,7 @@ def collect_new_team_data(df):
 
 
 def update_game_data(sql_col_mapping):
-    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=8888)
+    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=3306)
     # Need to load in CSV identify the most recent date, scrape from most recent date to today, append
     game_data = pd.read_sql('SELECT * FROM game_data', con = db)
     hit, pit = collect_new_team_data(game_data)
@@ -246,6 +246,10 @@ def update_game_data(sql_col_mapping):
         new_stats.fillna('NA', inplace = True)
         #Dropping #_x, #_y
         new_stats.drop(columns = ['#_x', '#_y'], inplace = True)
+        engine = create_engine("mysql+pymysql://root:@127.0.0.1:3306/mlb_db"
+                       .format(user="root",
+                               pw="",
+                               db="mlb_db"))
         # Insert whole DataFrame into MySQL
         new_stats.to_sql('game_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
 
@@ -457,7 +461,7 @@ def add_new_player_data(hit_df, pit_df):
 
 
 def update_players_data(sql_col_mapping):
-    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=8888)
+    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=3306)
     tblchk = db.cursor()
     hit_df_ = pd.read_sql('SELECT * FROM hitter_data', con = db)
     pit_df_ = pd.read_sql('SELECT * FROM pitcher_data', con = db)
@@ -485,9 +489,9 @@ def update_players_data(sql_col_mapping):
                         WHERE pd.Season >= {max_year};
                         COMMIT;'''
         tblchk.execute(sql_query)
-        engine = create_engine("mysql+pymysql://root:P@ssw0rd@localhost/mlb_db"
+        engine = create_engine("mysql+pymysql://root:@127.0.0.1:3306/mlb_db"
                        .format(user="root",
-                               pw="P@ssw0rd",
+                               pw="",
                                db="mlb_db"))
         # adding data from newest year
         hit.to_sql('hitter_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
@@ -579,14 +583,11 @@ def collect_team_data_yearly(year):
 # In[68]:
 
 def update_team_data(sql_col_mapping):
-    print('here')
     engine = create_engine("mysql+pymysql://root:@127.0.0.1:3306/mlb_db"
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
-    print('connected')
     dbs = pd.read_sql('show tables in mlb_db', con = engine)
-    print(dbs)
     sql_team_data = pd.read_sql('SELECT * FROM team_data', con = engine)
     db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=3306)
     tblchk = db.cursor()
@@ -612,10 +613,6 @@ def update_team_data(sql_col_mapping):
     #Dropping unnecessary columns
     team_data.drop(columns = ['#_x', '#_y'], inplace = True)
     #Creating engine to append dataframe to database
-    engine = create_engine("mysql+pymysql://root:P@ssw0rd@localhost/mlb_db"
-                       .format(user="root",
-                               pw="P@ssw0rd",
-                               db="mlb_db"))
     # adding data from newest year
     team_data.to_sql('team_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
 
