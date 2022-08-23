@@ -584,6 +584,7 @@ def update_team_data(sql_col_mapping):
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
+    print('connected')
     dbs = pd.read_sql('show tables in mlb_db', con = engine)
     print(dbs)
     sql_team_data = pd.read_sql('SELECT * FROM team_data', con = engine)
