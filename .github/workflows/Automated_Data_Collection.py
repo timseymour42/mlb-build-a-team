@@ -587,8 +587,6 @@ def update_team_data(sql_col_mapping):
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
-    dbs = pd.read_sql('show tables in mlb_db', con = engine)
-    sql_team_data = pd.read_sql('SELECT * FROM team_data', con = engine)
     db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=3306)
     tblchk = db.cursor()
     # The year of the latest record in the data table
