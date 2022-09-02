@@ -583,11 +583,11 @@ def collect_team_data_yearly(year):
 # In[68]:
 
 def update_team_data(sql_col_mapping):
-    engine = create_engine("mysql+pymysql://root:@127.0.0.1:3306/mlb_db"
+    engine = create_engine("mysql+pymysql://root:@127.0.0.1:8080/mlb_db"
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
-    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=3306)
+    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=8080)
     tblchk = db.cursor()
     # The year of the latest record in the data table
     sql_team_data = pd.read_sql('SELECT * FROM team_data', con = db)
