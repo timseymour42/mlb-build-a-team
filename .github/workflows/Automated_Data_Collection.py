@@ -1,47 +1,15 @@
 import datetime
 import pandas as pd
-import numpy as np
-import seaborn as sns
-import plotly.express as px
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import roc_auc_score
-from sklearn import metrics
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import LinearSVC
-import matplotlib.pyplot as plt
-from sklearn.naive_bayes import GaussianNB
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.ensemble import AdaBoostRegressor
-from sklearn.model_selection import KFold
-from sklearn import linear_model
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-from sklearn.feature_selection import RFE
-from sklearn.linear_model import LogisticRegression
-import plotly
-from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import GradientBoostingClassifier
+import pymysql
 from sqlalchemy import create_engine
 import MySQLdb
 
-
-# In[5]:
 
 
 #Changing column names of python df to be able to insert into SQL smoothly
 sql_col_mapping = {'BB%': 'BB_pct', 'K%': 'K_pct', 'wRC+': 'wRC_plus', 'K/9': 'K_per_9',
        'BB/9': 'BB_per_9', 'HR/9': 'HR_per_9', 'LOB%': 'LOB_pct', 'GB%': 'GB_pct', 'HR/FB': 'HR_per_FB', 'vFA (pi)': 'vFA'}
 
-
-# In[6]:
 
 
 #To change column names of SQL Table for agreement with Python
@@ -51,8 +19,6 @@ python_col_mapping = {v: k for k, v in sql_col_mapping.items()}
 # # Creating CSV with all games from 2015+
 
 # Scraping team data from 2015 and later
-
-# In[2]:
 
 
 def date_to_str(date):
@@ -75,7 +41,6 @@ def date_to_str(date):
 
 # Scraping process takes ~20 minutes; CSV stored for convenience
 
-# In[3]:
 
 
 def collect_team_data():
@@ -124,15 +89,12 @@ def collect_team_data():
     return hit, pit
 
 
-# In[4]:
-
 
 # CODE USED FOR INITIAL SCRAPING
 
 # hit, pit = collect_team_data()
 
 
-# In[4]:
 
 
 def collect_new_team_data(df):
@@ -173,9 +135,6 @@ def collect_new_team_data(df):
     return hit, pit
 
 
-# In[6]:
-
-
 #CODE USED FOR INITIAL SCRAPING
 
 # pit.drop(columns = ['G'], inplace = True)
@@ -186,8 +145,6 @@ def collect_new_team_data(df):
 # all_stats.to_csv('daily_game_stats.csv') 
 # files.download('daily_game_stats.csv')
 
-
-# In[100]:
 
 
 # import MySQLdb
@@ -206,8 +163,6 @@ def collect_new_team_data(df):
 
 # Method of adding to SQL game_data Table
 
-# In[14]:
-
 
 # create sqlalchemy engine
 # engine = create_engine("mysql+pymysql://root:P@ssw0rd@localhost/mlb_db"
@@ -215,8 +170,6 @@ def collect_new_team_data(df):
 #                                pw="P@ssw0rd",
 #                                db="mlb_db"))
 
-
-# In[9]:
 
 
 # CODE FOR ADDING INITIAL DATA PREVIOUSLY SCRAPED
@@ -230,15 +183,13 @@ def collect_new_team_data(df):
 # new_stats.to_sql('game_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
 
 
-# In[7]:
-
 
 def update_game_data(sql_col_mapping):
-    engine = create_engine("mysql+pymysql://root:@127.0.0.1:8080/mlb_db"
+    engine = create_engine("mysql+pymysql://root:@127.0.0.1/mlb_db"
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
-    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=8080)
+    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db')
     tblchk = db.cursor()
     # Need to load in CSV identify the most recent date, scrape from most recent date to today, append
     game_data = pd.read_sql('SELECT * FROM game_data', con = db)
@@ -255,8 +206,6 @@ def update_game_data(sql_col_mapping):
         new_stats.to_sql('game_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
 
 
-# In[13]:
-
 
 #update_game_data(sql_col_mapping)
 
@@ -265,7 +214,6 @@ def update_game_data(sql_col_mapping):
 
 # # Scraping Player Data
 
-# In[8]:
 
 
 def scrape_player_data():
@@ -308,8 +256,6 @@ def scrape_player_data():
     return wrc, pitch
 
 
-# In[9]:
-
 
 def string_to_num(string):
     if(type(string) == str):
@@ -317,8 +263,6 @@ def string_to_num(string):
             string = string.replace('%', '')
     return float(string)
 
-
-# In[10]:
 
 
 def clean_player_data(hit_df, pitch_df):
@@ -352,8 +296,6 @@ def clean_player_data(hit_df, pitch_df):
     print(hit_df.columns)
     return hit_df, pitch_df
 
-
-# In[22]:
 
 
 def add_new_player_data(hit_df, pit_df):
@@ -398,8 +340,6 @@ def add_new_player_data(hit_df, pit_df):
 
 # ### Loading player data from CSVs into SQL Tables
 
-# In[12]:
-
 
 # import MySQLdb
 # db = MySQLdb.connect("localhost", 'root', 'P@ssw0rd', 'mlb_db')
@@ -424,9 +364,6 @@ def add_new_player_data(hit_df, pit_df):
 # tblchk.execute(sql_query)
 
 
-# In[15]:
-
-
 # #CODE FOR ADDING INITIAL DATA PREVIOUSLY SCRAPED
 # engine = create_engine("mysql+pymysql://root:P@ssw0rd@localhost/mlb_db"
 #                        .format(user="root",
@@ -439,9 +376,6 @@ def add_new_player_data(hit_df, pit_df):
 # new_hit_df.drop(columns = ['#'], inplace = True)
 # # Insert whole DataFrame into MySQL
 # new_hit_df.to_sql('hitter_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
-
-
-# In[16]:
 
 
 # #CODE FOR ADDING INITIAL DATA PREVIOUSLY SCRAPED
@@ -458,15 +392,13 @@ def add_new_player_data(hit_df, pit_df):
 # new_pit_df.to_sql('pitcher_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
 
 
-# In[17]:
-
 
 def update_players_data(sql_col_mapping):
-    engine = create_engine("mysql+pymysql://root:@127.0.0.1:8080/mlb_db"
+    engine = create_engine("mysql+pymysql://root:@127.0.0.1/mlb_db"
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
-    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=8080)
+    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db')
     tblchk = db.cursor()
     hit_df_ = pd.read_sql('SELECT * FROM hitter_data', con = db)
     pit_df_ = pd.read_sql('SELECT * FROM pitcher_data', con = db)
@@ -503,9 +435,6 @@ def update_players_data(sql_col_mapping):
 # 
 # - key question is what model or combination of models minimizes error in predicting team success historically
 
-# In[35]:
-
-
 # import MySQLdb
 # db = MySQLdb.connect("localhost", 'root', 'P@ssw0rd', 'mlb_db')
 # tblchk = db.cursor()
@@ -523,9 +452,6 @@ def update_players_data(sql_col_mapping):
 # tblchk.execute(sql_query)
 
 
-# In[70]:
-
-
 #CODE FOR ADDING INITIAL DATA PREVIOUSLY SCRAPED
 
 # team_data = pd.read_csv('https://github.com/timseymour42/MLB-Build-a-Team/blob/8d552de89f4daf8a9aa27edde95179f3bb192258/team_yearly_data.csv?raw=true', header = 0)
@@ -536,9 +462,6 @@ def update_players_data(sql_col_mapping):
 # team_data.drop(columns = ['#_x', '#_y', 'Unnamed: 0'], inplace = True)
 # # Insert whole DataFrame into MySQL
 # team_data.to_sql('team_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
-
-
-# In[61]:
 
 
 def collect_team_data_yearly(year):
@@ -572,8 +495,6 @@ def collect_team_data_yearly(year):
     return wrc, pitch
 
 
-# In[ ]:
-
 
 # CODE USED FOR INITIAL SCRAPING
 
@@ -581,14 +502,12 @@ def collect_team_data_yearly(year):
 # files.download('team_yearly_data.csv')
 
 
-# In[68]:
-
 def update_team_data(sql_col_mapping):
-    engine = create_engine("mysql+pymysql://root:@127.0.0.1:8080/mlb_db"
+    engine = create_engine("mysql+pymysql://root:@127.0.0.1/mlb_db"
                        .format(user="root",
                                pw="",
                                db="mlb_db"))
-    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db', port=8080)
+    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db')
     tblchk = db.cursor()
     # The year of the latest record in the data table
     sql_team_data = pd.read_sql('SELECT * FROM team_data', con = db)
@@ -616,16 +535,11 @@ def update_team_data(sql_col_mapping):
     team_data.to_sql('team_data', con = engine, if_exists = 'append', chunksize = 1000, index = False)
 
 
-# In[71]:
-
 
 def main():
     update_team_data(sql_col_mapping)
     update_game_data(sql_col_mapping)
     update_players_data(sql_col_mapping)
-
-
-# In[ ]:
 
 
 if __name__ == '__main__':
