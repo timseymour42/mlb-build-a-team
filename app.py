@@ -1,6 +1,5 @@
 import datetime
 import pandas as pd
-import pandas as pd
 import numpy as np
 import plotly.express as px
 from sklearn.ensemble import AdaBoostClassifier
@@ -12,7 +11,6 @@ from sklearn.metrics import roc_auc_score
 from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import LinearSVC
-import matplotlib.pyplot as plt
 from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
@@ -330,8 +328,6 @@ team_history = clean_team_data(sql_team_data)
 team_history = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG', 'W']]
 ui_hit_df.reset_index(inplace=True)
 ui_pitch_df.reset_index(inplace=True)
-ui_hit_df = ui_hit_df.head()
-ui_pitch_df = ui_pitch_df.head()
 
 app = Dash(__name__)
 
@@ -603,13 +599,13 @@ def update_data(teams, hitters):
     htiters: selected hitters
   '''
   if teams and hitters:
-    a = hit_df.loc[(ui_hit_df.Team.isin(teams)) & (ui_hit_df.Name.isin(hitters))]
+    a = ui_hit_df.loc[(ui_hit_df.Team.isin(teams)) & (ui_hit_df.Name.isin(hitters))]
     return a.to_dict('records')
   elif teams:
-    a = hit_df.loc[(ui_hit_df.Team.isin(teams))]
+    a = ui_hit_df.loc[(ui_hit_df.Team.isin(teams))]
     return a.to_dict('records')
   elif hitters:
-    a = hit_df.loc[(ui_hit_df.Name.isin(hitters))]
+    a = ui_hit_df.loc[(ui_hit_df.Name.isin(hitters))]
     return a.to_dict('records')
   return ui_hit_df.to_dict('records')
 
