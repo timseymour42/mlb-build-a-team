@@ -307,27 +307,39 @@ def clean_player_data(hit_df, pitch_df):
     hit_df['TB'] = hit_df['SLG'] * hit_df['AB']
     return hit_df, pitch_df
 
+def refresh_data():
+    db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db')
+    tblchk = db.cursor()
+    # The year of the latest record in the data table
+    sql_game_data = pd.read_sql('SELECT * FROM game_data', con = db)
+    sql_team_data = pd.read_sql('SELECT * FROM team_data', con = db)
+    sql_hitter_data = pd.read_sql('SELECT * FROM hitter_data', con = db)
+    sql_pitcher_data = pd.read_sql('SELECT * FROM pitcher_data', con = db)
+    sql_col_mapping = {'BB%': 'BB_pct', 'K%': 'K_pct', 'wRC+': 'wRC_plus', 'K/9': 'K_per_9',
+        'BB/9': 'BB_per_9', 'HR/9': 'HR_per_9', 'LOB%': 'LOB_pct', 'GB%': 'GB_pct', 'HR/FB': 'HR_per_FB', 'vFA (pi)': 'vFA'}
+    python_col_mapping = {v: k for k, v in sql_col_mapping.items()}
+    sql_game_data.rename(columns = python_col_mapping, inplace = True)
+    sql_team_data.rename(columns = python_col_mapping, inplace = True)
+    sql_hitter_data.rename(columns = python_col_mapping, inplace = True)
+    sql_pitcher_data.rename(columns = python_col_mapping, inplace = True)
+    X, y, scales = clean_game_data(sql_game_data)
+    ui_hit_df, ui_pitch_df = clean_player_data(sql_hitter_data, sql_pitcher_data)
+    team_history = clean_team_data(sql_team_data)
+    team_history = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG', 'W']]
+    ui_hit_df.reset_index(inplace=True)
+    ui_pitch_df.reset_index(inplace=True)
+    #hitters selected
+    hit_sel = pd.DataFrame(columns = ['Name', 'Years', 'Games'])
+    #pitchers selected
+    pit_sel = pd.DataFrame(columns = ['Name', 'Years', 'Innings'])
+    #current year
+    curr_year = datetime.datetime.now().year
+    first_year = int(ui_hit_df['Season'].min())
+    games = 1458
+    innings = 1458
+    return team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings
 
-db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db')
-tblchk = db.cursor()
-# The year of the latest record in the data table
-sql_game_data = pd.read_sql('SELECT * FROM game_data', con = db)
-sql_team_data = pd.read_sql('SELECT * FROM team_data', con = db)
-sql_hitter_data = pd.read_sql('SELECT * FROM hitter_data', con = db)
-sql_pitcher_data = pd.read_sql('SELECT * FROM pitcher_data', con = db)
-sql_col_mapping = {'BB%': 'BB_pct', 'K%': 'K_pct', 'wRC+': 'wRC_plus', 'K/9': 'K_per_9',
-       'BB/9': 'BB_per_9', 'HR/9': 'HR_per_9', 'LOB%': 'LOB_pct', 'GB%': 'GB_pct', 'HR/FB': 'HR_per_FB', 'vFA (pi)': 'vFA'}
-python_col_mapping = {v: k for k, v in sql_col_mapping.items()}
-sql_game_data.rename(columns = python_col_mapping, inplace = True)
-sql_team_data.rename(columns = python_col_mapping, inplace = True)
-sql_hitter_data.rename(columns = python_col_mapping, inplace = True)
-sql_pitcher_data.rename(columns = python_col_mapping, inplace = True)
-X, y, scales = clean_game_data(sql_game_data)
-ui_hit_df, ui_pitch_df = clean_player_data(sql_hitter_data, sql_pitcher_data)
-team_history = clean_team_data(sql_team_data)
-team_history = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG', 'W']]
-ui_hit_df.reset_index(inplace=True)
-ui_pitch_df.reset_index(inplace=True)
+team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings = refresh_data()
 
 app = Dash(__name__)
 
@@ -340,15 +352,7 @@ def generate_table(dataframe, id):
             html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
         ]) for i in range(len(dataframe))], id = id
     )
-#hitters selected
-hit_sel = pd.DataFrame(columns = ['Name', 'Years', 'Games'])
-#pitchers selected
-pit_sel = pd.DataFrame(columns = ['Name', 'Years', 'Innings'])
-#current year
-curr_year = datetime.datetime.now().year
-first_year = int(ui_hit_df['Season'].min())
-games = 1458
-innings = 1458
+
 
 
 app.layout = html.Div(children=[
@@ -793,4 +797,4 @@ def submit_team(submit, pit_sel_tbl, hit_sel_tbl, gs, inn):
     return reg_stats, f'Wins: {wins}'
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server()
