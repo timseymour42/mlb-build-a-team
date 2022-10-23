@@ -36,7 +36,10 @@ from dash.dependencies import Input, Output, State
 import json
 from dash.exceptions import PreventUpdate
 import MySQLdb
+import dash_bootstrap_components as dbc
+from dash_bootstrap_templates import load_figure_template
 
+load_figure_template('LUX')
 
 def date_to_str(date):
     '''
@@ -326,6 +329,9 @@ def refresh_data():
     ui_hit_df, ui_pitch_df = clean_player_data(sql_hitter_data, sql_pitcher_data)
     team_history = clean_team_data(sql_team_data)
     team_history = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG', 'W']]
+    team_history['Season'] = team_history['Season'].apply(int)
+    team_history = team_history.sort_values(by='Season', ascending=False).round(decimals=3)
+    team_history['W'] = team_history['W'].round()
     ui_hit_df.reset_index(inplace=True)
     ui_pitch_df.reset_index(inplace=True)
     #hitters selected
@@ -337,11 +343,13 @@ def refresh_data():
     first_year = int(ui_hit_df['Season'].min())
     games = 1458
     innings = 1458
-    return team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings
+    ui_hit_df = ui_hit_df.round(decimals=3).sort_values(by=['Season', 'wRC+'], ascending=False)
+    ui_pitch_df = ui_pitch_df.round(decimals=3).sort_values(by=['Season', 'WAR'], ascending=False)
+    return team_history, ui_hit_df.head(), ui_pitch_df.head(), X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings
 
 team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings = refresh_data()
 
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 
 def generate_table(dataframe, id):
     return html.Table(
@@ -371,7 +379,9 @@ app.layout = html.Div(children=[
     #PLAYER SELECTION
     #Multi DropDown for hitters
     html.Div(children = [
-        
+
+        #HITTER, START YEAR, END YEAR
+        html.Div(children = [
         html.Label([
             "Hitter",
             dcc.Dropdown(
@@ -389,7 +399,7 @@ app.layout = html.Div(children=[
                 id='start-year-dropdown', clearable=False,
                 value=[curr_year], options=[
                     {'label': c, 'value': c}
-                    for c in range(first_year, curr_year + 1, 1)
+                    for c in reversed(range(first_year, curr_year + 1, 1))
                 ])]), 
         #End year
         html.Label(['End Year',
@@ -397,20 +407,34 @@ app.layout = html.Div(children=[
                 id='end-year-dropdown', clearable=False,
                 value=[curr_year], options=[
                     {'label': c, 'value': c}
-                    for c in range(first_year, curr_year + 1, 1)
-        ])]),
-        #Add Player Button
-        html.Button('Submit', id='submit-hitter', n_clicks=None, type = 'submit'),
-        #Clear Player info Button
-        html.Button('Clear Player Info', id='clear-player', n_clicks=None),
+                    for c in reversed(range(first_year, curr_year + 1, 1))
+        ])])], style = {'display': 'inline-block'}),
+        #HITTER, START YEAR, END YEAR
+
+        #GAME INPUT, SUBMIT HITTER, CLEAR PLAYER INFO
         #Input Box for games
         html.Label(['Games', dcc.Input(id='game_input', type='number', min=1, max=games, step=1)]),
+        #Add Player Button
+        html.Button('Submit Hitter', id='submit-hitter', n_clicks=None, type = 'submit'),
+        #Clear Player info Button
+        html.Button('Clear Player Info', id='clear-player', n_clicks=None),
+        #GAME INPUT,SUBMIT HITTER, CLEAR PLAYER INFO
+
+        #CLEAR LINEUP        
+        #Clear lineup button
+        html.Button('Clear Lineup', id='clear-lineup', n_clicks=None, style = {'text-align': 'center'}),
+        #CLEAR LINEUP
+
+        #GAMES REMAINING LABEL
         #Label for Games Remaining
         #HTML Table populated by DropDown; (Player, Years, Games)
         html.Div(children = [f'Hitters Selected; Games Remaining: {games}'], id = 'game'),
+        #GAMES REMAINING LABEL
+
+        #TABLE
         html.Div(children = [generate_table(hit_sel, 'hit_sel')], id = 'hit_sel_tbl'),
-        #Clear lineup button
-        html.Button('Clear Lineup', id='clear-lineup', n_clicks=None, style = {'text-align': 'center'}),
+        #TABLE
+        
         #Multi DropDown for pitchers
         html.Label([
             "Pitcher",
@@ -439,17 +463,17 @@ app.layout = html.Div(children=[
                     for c in range(first_year, curr_year + 1, 1)
         ])]),
         #Add Pitcher Button
-        html.Button('Submit', id='submit-pitcher', n_clicks=None),
+        html.Button('Submit Pitcher', id='submit-pitcher', n_clicks=None),
         #Clear Pitcher info Button
         html.Button('Clear Pitcher Info', id='clear-pitcher', n_clicks=None),
         #Input Box for innings
         html.Label(['Innings', dcc.Input(id='inn_input', type='number', min=1, max=innings, step=1)]),
+        #Clear rotation button
+        html.Button('Clear Rotation', id='clear-rotation', n_clicks=None, style = {'text-align': 'center'}),
         #Label for Innings Remaining
         #HTML Table populated by DropDown; (Player, Years, Innings)
         html.Div(children = [f'Pitchers Selected; Games Remaining: {innings}'], id = 'inn'),
         html.Div(children = [generate_table(pit_sel, 'pit_sel')], id = 'pit_sel_tbl'),
-        #Clear rotation button
-        html.Button('Clear Rotation', id='clear-rotation', n_clicks=None, style = {'text-align': 'center'}),
         #Submit Buttom that is only clickable when innings and games remaining are 0
         html.Button('Submit Team', id='sub-team', n_clicks=None, style = {'margin-left': '55px'}),
         html.Div(children = ['Wins: '], id = 'team-wins-prediction', style={'margin-top': '20px', 'margin-left': '10px'}),
@@ -741,7 +765,7 @@ def update_figure(team, sy, ey, stat, team_stats, sub_team):
         a = a.append(team_stats, ignore_index = True)
     
     fig = px.scatter(a, x = s, y = 'W', hover_data=('Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG'), 
-                    color = 'my_team')
+                    color = 'my_team', title='MLB Team Seasons', labels={'W': 'Wins'})
     return fig
 
 #SUBMITTING A LINEUP
@@ -797,4 +821,4 @@ def submit_team(submit, pit_sel_tbl, hit_sel_tbl, gs, inn):
     return reg_stats, f'Wins: {wins}'
 
 if __name__ == '__main__':
-    app.run_server()
+    app.run_server(debug=True)
