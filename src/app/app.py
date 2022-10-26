@@ -350,7 +350,7 @@ def refresh_data():
 team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings = refresh_data()
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
-
+server=app.server
 def generate_table(dataframe, id):
     return html.Table(
         # Header
