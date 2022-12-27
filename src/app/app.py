@@ -123,8 +123,12 @@ class hitter:
             if seas in hitter.index:
                 played.append(seas)
         hitter = hitter.loc[played]
-        #wRC+ is normalized season by season, so average is taken across inputted season range; drawback is smaller sample sizes may have greater effect than hoped
-        #Users will be able to see season by season stats for the player, so they can use their own intuition to evaluate validity of using a given season for a player
+        #wRC+ is normalized season by season, so average is taken 
+        # across inputted season range; drawback is smaller sample
+        #  sizes may have greater effect than hoped
+        #Users will be able to see season by season stats for the player, 
+        # so they can use their own intuition to evaluate validity of 
+        # using a given season for a player
         self.wrcp = hitter['wRC+'].mean()
         #finds slugging percentage
         self.slg = hitter['TB'].sum() / hitter['AB'].sum()
@@ -229,11 +233,8 @@ def wins_for_team(lineup, rotation, model='standard'):
         stats[stat] = (stats[stat] - scales.loc[stat]['Mean']) / scales.loc[stat]['Unit Variance']
     if (type(model) == str):
         logReg = LogisticRegression().fit(X, y)
-        adaBoost = AdaBoostClassifier(learning_rate = .3, n_estimators = 30).fit(X, y)
-        wins = logReg.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1] * 2
-        wins += adaBoost.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1]
-        wins /= 3
-        wins *= 162
+        wins = logReg.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1] * 162
+        wins = linear_win_function.predict(np.array(wins).reshape(-1, 1))[0]
         return wins, reg_stats
     else:
         return model.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1] * 162, reg_stats
@@ -244,7 +245,7 @@ def wins_for_team(lineup, rotation, model='standard'):
 
 
 def clean_game_data(all_stats):
-    all_stats = all_stats[all_stats.GS == '1']
+    all_stats = all_stats[all_stats.GS == 1]
     # These columns have only null values for single games
     all_stats.drop(columns = ['xwOBA', 'xERA', 'vFA (pi)'], inplace = True)
     # applying the function to each column to ensure all data points are numerical
@@ -292,7 +293,6 @@ def clean_player_data(hit_df, pitch_df):
     Returns wrc, pitch as clean datasets for use in App'''
     
     hit_df = hit_df[hit_df['wRC+'] != None]
-    pitch_df.dropna(inplace=True)
     # applying the function to each column to ensure all data points are numerical
     for col in hit_df.columns:
         if col not in ['Name', 'Team', 'GB', 'Pos']:
@@ -310,7 +310,17 @@ def clean_player_data(hit_df, pitch_df):
     hit_df['TB'] = hit_df['SLG'] * hit_df['AB']
     return hit_df, pitch_df
 
+
+# scale WAR, BsR, Def
+def scale_stat(df, stats):
+    for stat in stats:
+        df[stat] = (162 / df['GS']) * df[stat]
+    return df
+
 def refresh_data():
+    '''
+    This section will be replaced to read from github csv for deployment purposes
+
     db = MySQLdb.connect(host='127.0.0.1', user='root', passwd='', db='mlb_db')
     tblchk = db.cursor()
     # The year of the latest record in the data table
@@ -318,6 +328,11 @@ def refresh_data():
     sql_team_data = pd.read_sql('SELECT * FROM team_data', con = db)
     sql_hitter_data = pd.read_sql('SELECT * FROM hitter_data', con = db)
     sql_pitcher_data = pd.read_sql('SELECT * FROM pitcher_data', con = db)
+    '''
+    sql_game_data = pd.read_csv('https://github.com/timseymour42/mlbapp/blob/main/game_data.csv?raw=true')
+    sql_team_data = pd.read_csv('https://github.com/timseymour42/mlbapp/blob/main/team_data.csv?raw=true')
+    sql_hitter_data = pd.read_csv('https://github.com/timseymour42/mlbapp/blob/main/hitter_data.csv?raw=true')
+    sql_pitcher_data = pd.read_csv('https://github.com/timseymour42/mlbapp/blob/main/pitcher_data.csv?raw=true')
     sql_col_mapping = {'BB%': 'BB_pct', 'K%': 'K_pct', 'wRC+': 'wRC_plus', 'K/9': 'K_per_9',
         'BB/9': 'BB_per_9', 'HR/9': 'HR_per_9', 'LOB%': 'LOB_pct', 'GB%': 'GB_pct', 'HR/FB': 'HR_per_FB', 'vFA (pi)': 'vFA'}
     python_col_mapping = {v: k for k, v in sql_col_mapping.items()}
@@ -328,6 +343,7 @@ def refresh_data():
     X, y, scales = clean_game_data(sql_game_data)
     ui_hit_df, ui_pitch_df = clean_player_data(sql_hitter_data, sql_pitcher_data)
     team_history = clean_team_data(sql_team_data)
+    team_history = scale_stat(team_history, ['BsR', 'WAR_y', 'Def'])
     team_history = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG', 'W']]
     team_history['Season'] = team_history['Season'].apply(int)
     team_history = team_history.sort_values(by='Season', ascending=False).round(decimals=3)
@@ -347,10 +363,37 @@ def refresh_data():
     ui_pitch_df = ui_pitch_df.round(decimals=3).sort_values(by=['Season', 'WAR'], ascending=False)
     return team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings
 
+def linear_function(team_history, X, y):
+    # applying the function to Season to make Season numerical
+
+    team_history['Season'] = team_history['Season'].apply(string_to_num)
+    wins_tm = team_history[team_history.Season > 2014]['W'].reset_index(drop=True)
+    team_history_lr = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG']]
+    team_history_lr['BsR'] = team_history_lr['BsR'] / 162
+    team_history_lr['WAR_y'] = team_history_lr['WAR_y'] / 162
+    team_history_lr['Def'] = team_history_lr['Def'] / 162
+    #Renaming for agreement with scales dataframe
+    team_history_lr.rename(columns = {'WAR_y': 'WAR'}, inplace = True)
+    metrics_ = ['wRC+', 'HR/9', 'BsR', 'WAR', 'Def', 'SLG']
+    for stat in metrics_:
+        team_history_lr[stat] = (team_history_lr[stat] - scales.loc[stat]['Mean']) / scales.loc[stat]['Unit Variance']
+    #Changing WAR back for agreement with model
+    team_history_lr.rename(columns = {'WAR': 'WAR_y'}, inplace = True)
+    team_history_lr = team_history_lr[team_history_lr.Season > 2014]
+    model = LogisticRegression().fit(X, y)
+    pred = model.predict_proba(team_history_lr.drop(columns=['Team', 'Season'])) * 162
+    pred = pred[:, 1]
+    linear_win_function = LinearRegression().fit(np.array(pred).reshape(-1, 1), wins_tm)
+    return linear_win_function
+
 team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings = refresh_data()
+ui_hit_df = ui_hit_df.drop(columns=['index', 'hitter_id'])
+ui_pitch_df = ui_pitch_df.drop(columns=['index', 'pitcher_id'])
+linear_win_function = linear_function(team_history, X, y)
+
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
-#server for heroku
+#server for render
 server=app.server
 def generate_table(dataframe, id):
     return html.Table(
@@ -579,17 +622,17 @@ app.layout = html.Div(children=[
         html.Label([
             "Hitter",
             dcc.Dropdown(
-                id='hitter-dropdown', clearable=True,
+                id='hitter-dropdown', clearable=False,
                 style={'width':'200px'},
                 multi = True,
-                value=[], options=[
+                value=['Aaron Judge'], options=[
                     {'label': c, 'value': c}
                     for c in ui_hit_df['Name'].unique()
                 ])
         ]),
-        #hitter research table
+        # hitter research table
         dash_table.DataTable(
-        data=ui_hit_df.to_dict('records'), ####### inserted line
+        data=ui_hit_df.loc[ui_hit_df.Name == 'Aaron Judge'].to_dict('records'), ####### inserted line
         columns = [{'id': c, 'name': c} for c in ui_hit_df.columns], ####### inserted line
             id='htable',
             filter_action='native',
@@ -603,8 +646,9 @@ app.layout = html.Div(children=[
             selected_rows=[],
             page_action="native",
             page_current= 0,
-            page_size= 10,
-            hidden_columns = ['AB', 'TB']
+            virtualization=False,
+            page_size= 20,
+            hidden_columns = ['AB', 'TB'], fill_width=False
         )], style = {'display': 'inline-block', 'margin-left':'50px'}),
     html.Div([
     #PITCHER SECTION
@@ -624,17 +668,17 @@ app.layout = html.Div(children=[
     html.Label([
         "Pitcher",
         dcc.Dropdown(
-            id='pitcher-dropdown', clearable=True,
+            id='pitcher-dropdown', clearable=False,
             style={'width':'200px'},
             multi = True,
-            value=[], options=[
+            value=['Corbin Burnes'], options=[
                 {'label': c, 'value': c}
                 for c in ui_pitch_df['Name'].unique()
             ])
     ]),
-    #pitcher research table
+    # pitcher research table
     dash_table.DataTable(
-       data=ui_pitch_df.to_dict('records'), ####### inserted line
+       data=ui_pitch_df.loc[ui_pitch_df.Name == 'Corbin Burnes'].to_dict('records'), ####### inserted line
        columns = [{'id': c, 'name': c} for c in ui_pitch_df.columns], ####### inserted line
         id='ptable',
         filter_action='native',
@@ -647,12 +691,12 @@ app.layout = html.Div(children=[
         selected_columns=[],
         selected_rows=[],
         page_action="native",
+        virtualization=False,
         page_current= 0,
-        page_size= 10,
+        page_size= 20,
         hidden_columns = ['HR']
-    )], style={'margin-left':'50px'})
+    )], style={'margin-left':'50px', 'margin-bottom': '200px'})])
     
-])
 
 #HITTER RESEARCH SECTION CALLBACKS
 @app.callback(Output('htable', 'columns'), [Input('team-hit', 'value'), 
@@ -671,13 +715,10 @@ def update_data(teams, hitters):
   if teams and hitters:
     a = ui_hit_df.loc[(ui_hit_df.Team.isin(teams)) & (ui_hit_df.Name.isin(hitters))]
     return a.to_dict('records')
-  elif teams:
-    a = ui_hit_df.loc[(ui_hit_df.Team.isin(teams))]
-    return a.to_dict('records')
   elif hitters:
     a = ui_hit_df.loc[(ui_hit_df.Name.isin(hitters))]
     return a.to_dict('records')
-  return ui_hit_df.to_dict('records')
+  return pd.DataFrame().to_dict('records')
 
 #PITCHER RESEARCH SECTION CALLBACKS
 @app.callback(Output('ptable', 'columns'), [Input('team-pitch', 'value'), 
@@ -694,15 +735,12 @@ def update_data(teams, pitchers):
     htiters: selected hitters
   '''
   if teams and pitchers:
-    a= ui_pitch_df.loc[(ui_pitch_df.Team.isin(teams)) & (ui_pitch_df.Name.isin(pitchers))]
-    return a.to_dict('records')
-  elif teams:
-    a= ui_pitch_df.loc[(ui_pitch_df.Team.isin(teams))]
+    a = ui_pitch_df.loc[(ui_pitch_df.Team.isin(teams)) & (ui_pitch_df.Name.isin(pitchers))]
     return a.to_dict('records')
   elif pitchers:
-    a= ui_pitch_df.loc[(ui_pitch_df.Name.isin(pitchers))]
+    a = ui_pitch_df.loc[(ui_pitch_df.Name.isin(pitchers))]
     return a.to_dict('records')
-  return ui_pitch_df.to_dict('records')
+  return pd.DataFrame().to_dict('records')
 
 #CALLBACK FOR PLAYER SUBMISSION
 @app.callback([Output('hit_sel_tbl', 'children'), Output('game', 'children'),
