@@ -48,9 +48,11 @@ For both models, Earned Run Average (ERA) is deemed the most important to win pr
 #### Correlation
 
  The next step was to assess each feature’s correlation with each other feature and with winning. Beginning with feature to feature correlation, I separated the statistics into pitcher data and position player data because they are independent of one another. 
-	
-![image](https://drive.google.com/uc?export=view&id=1hxWETWmsKHD2NyXq3yaZMxC8nwBxSkT8) 
+
+ ![Fig4a (1)](https://github.com/timseymour42/MLB-Build-a-Team/assets/73562010/dd3cda11-90cb-4046-bf4a-cc55639e86e2)
+
 ![image](https://drive.google.com/uc?export=view&id=1TO3M7bvmt1wYWyUlZkQU5BfEsbCf-_Fw)
+
 Figure 4
 
 One area of focus from the pitching stats heat map is the strong negative correlation between Fielding Independent Pitching (FIP) and Wins Above Replacement (WAR). FIP is actually used in the calculation of pitching WAR, so this is no surprise, but it does highlight the need to choose between the two for inclusion in the model. 
@@ -59,8 +61,9 @@ WAR = [[([(League “FIP” – “FIP”) / Pitcher Specific Runs Per Win] + Re
 
 Looking at each statistics’s correlation with winning in figure 5, pitching WAR has a stronger correlation with winning than FIP. WRC+, wOBA, and ERA have the strongest correlations with winning of all the statistics. One other consideration in this feature selection process is that it would be preferable to include at least one statistic representing each facet of the game - Defensive Runs Above Average (Def) and Base Running (BsR) are the only defensive and baserunning advanced statistics that are kept on a game to game basis, so I chose to include these two to increase feature diversity. These stats had relatively weaker correlations with winning  (0.13 and .07)
 
-![image](https://drive.google.com/uc?export=view&id=1_erLp5APY5-Px5Znm3sm6s40tooXDY_D)
+![Fig5a (1)](https://github.com/timseymour42/MLB-Build-a-Team/assets/73562010/4d56af85-8142-415c-95dc-8f03bcb1e869)
 ![image](https://drive.google.com/uc?export=view&id=1K_Jj-VSxPN3G3zLhBxxSrteM-1DsI_3W)
+
 Figure 5
 
 ### Deciding on a Pitching Statistic
@@ -68,6 +71,7 @@ Figure 5
 From the feature importance analysis and my knowledge of the similarities of these statistics, I chose to move forward with wRC+, SLG, BsR, Def, and HR/9. The last step in the feature selection process was to decide on one more pitching statistic to use between WAR, FIP, and ERA. My method of choosing between the three was to evaluate model performance with each of the three stats using logistic regression as a baseline model. Each model was trained using the five features that were decided upon along with one of the pitching stats.
 
 ![image](https://drive.google.com/uc?export=view&id=1v0SAGAUy5rGpdfw7jVeltYVllp49L7Bn)
+
 Figure 6
 
 As displayed in figure 6, the ERA model is the best performing model across the board in terms of accuracy, precision, recall, F1 Score, and area under the curve (AUC). WAR clearly outperforms FIP as the second best metric. As previously mentioned, ERA is another results oriented stat that is biased by luck and team circumstance. ERA is calculated using the earned runs a pitcher allows, meaning that a run is only attributed to them if it was not caused by an error. A common misconception is that this detail properly accounts for defense. An error will only be credited to a defender when they are expected to make the play; if a defender makes an exceptional play for their pitcher and records an out, it would not have otherwise been recorded as an error. This is why pitchers with higher quality defenses behind them are at a tremendous advantage when it comes to ERA. Per FanGraphs, the Yankees led the league with 129 defensive runs saved (DRS) and the Giants finished last with -53 DRS in 2022. Giants pitchers are put at an extreme disadvantage in ERA because player fielding is not in their control. FIP and WAR, by contrast, only consider outcomes that the pitcher has control over in their calculations (HR, K, BB) so they generalize better to a new defense. Pitching WAR is thus the feature used in the final model. One shortcoming of FIP and WAR worth mentioning is that it cannot account for the tremendous value a catcher adds in framing pitches. 
@@ -81,6 +85,7 @@ The models that I chose to train, tune, and compare were sci-kit learn’s Logis
 As an example of my process in the first step, figure 7 gives a clear picture of the values for max depth in the Random Forest Classifier that will lead to overfitting. After a max depth of six, there is a sharp separation between training and testing accuracy indicating that models with larger max depths could be unnecessarily complex. 
 
 ![image](https://drive.google.com/uc?export=view&id=1338sT8_4FvFYhCq7IsRrVN14fSDL90n7)
+
 Figure 7
 
 ## Results
@@ -88,6 +93,7 @@ Figure 7
 After tuning each model, I trained them on the entire train and dev set and evaluated their performance on the hold-out test set. Every classifier was able to predict the winning team at a greater than 80% test accuracy! The AdaBoost Classifier performed the best with an 85.8% test accuracy and a 85.4% F1 Score. The test accuracy also exceeded the train accuracy which is a positive sign that the algorithm generalizes well to unseen data. The MLP, Random Forest, and Logistic Regression classifiers were all within 2.5% of AdaBoost’s accuracy, so there is a clear best predictor, but each classifier is reliable. 
 
 ![image](https://drive.google.com/uc?export=view&id=1o31FLac2GW8cdl_5GO7ALeFoqEac3Iz1)
+
 Figure 8
 
 ## Modifying the Models to Fit my Task
@@ -95,16 +101,19 @@ Figure 8
 As you will remember, the goal of this investigation is to be able to predict a team’s win total across an entire season rather than just whether or not they will win one game. With this in mind, my intuition was to use the predict_proba function for each model to see if these values would be representative of season win percentages. This function outputs the probability that the model classifies a data point as a win instead of a 0 or 1 concrete value. To do this, I loaded team data from FanGraphs for seasons since 2015 and scaled the data to be predicted upon by my models. For this task, I trained each model on the entire dataset and predicted upon the new team season data points, multiplying each output by 162 to mimic a full season.
 	
 ![image](https://drive.google.com/uc?export=view&id=1fpvkC3qn_u7oRZrOInTJ6m9xsKV67_ZD)
+
 Figure 9
 
 Both the Naive Bayes and Logistic Regression models appear to have linear relationships for their predict_proba predictions. The MLP Classifier behaved curiously in this analysis: this model has a large cluster of data points near the y-axis. It is possible that the model prioritized correctly predicting extreme positive examples meaning any given team’s season long statistical averages would not often meet the criteria for a win in a single game. Notably, the 2020 Dodgers that were on a 116 win pace were given a 2.5% chance to win a game. The Random Forest Classifier win predictions had an inconsistent relationship with wins making it a poor fit for my task. The AdaBoost Classifier requires a closer look as the predictions fall between 78 and 82 wins, so it is hard to tell the relationship from figure 9.
 
 ![image](https://drive.google.com/uc?export=view&id=1NmDLE-n86GS2cqZk0zMOWCiMDLfvhDpg)
+
 Figure 10
 
 There is clearly not a very strong relationship between win prediction probability and total wins for the AdaBoostClassifier upon a closer look in figure 10. 
 
 ![image](https://drive.google.com/uc?export=view&id=1lkR1PX1OtvNvbWghPEZmRTsmlByYa5Fg)
+
 Figure 11
 
 The clear choice for predicting wins across a full season is the Logistic Regression model. The next step in my process was to create a linear function that modifies the Logistic Regression prediction to minimize the error in win prediction. To accomplish this, I use a single feature linear regression. Making predictions on predictions is not an ideal data science practice, however the linear relationship between logistic regression win prediction season totals and actual wins is incredibly strong with a correlation coefficient greater than .9 as per figure 11. For the 2015-2022 seasons, the average error in win total is 4.38 and the median error is 3.52. These values represent a huge success for the win prediction task as my model can be expected to make a prediction within four wins of an actual win total.
@@ -114,6 +123,7 @@ The clear choice for predicting wins across a full season is the Logistic Regres
 With an effective win prediction model in hand, I wanted to create a user interface that any MLB fan could use to explore their own curiosities. Specifically, I wanted a fan to be able to choose any combination of players' seasons throughout baseball history and get an estimate of how many wins that team would have. For organizational purposes and for simpler aggregation of statistics, I built Hitter and Pitcher class objects. 
 
 ![image](https://drive.google.com/uc?export=view&id=1TbXMArSaUzT1UNFYWCOspVZbj5YYm80d)
+
 Figure 12
 
 Included in figure 12 is a code snippet of how a Pitcher object is initialized. The Hitter and Pitcher class also have getters, setters, and methods to scale a player’s production to a user-selected games played or innings pitched contribution. This structure allows the model to consume any number of games played or innings pitched for each player as it can assign a proportion to their impact on a hypothetical team. 
@@ -123,6 +133,7 @@ When a user interacts with the Dash app, they must populate their lineup and rot
 As an example, figure 13 displays what it would look like if 2022 Aaron Judge played all nine positions and 2021 Corbin Burnes threw every inning for a team. My model predicted that this team would finish 129-33. Clearly, there are no positional requirements when building out your lineup because the Def statistic is aggregated assuming the player will play each position as well as his primary position.
 
 ![image](https://drive.google.com/uc?export=view&id=1J_xOYJLelydc_ScmlpgkRT7F4lSVovr9)
+
 Figure 13
 
 There is also a search feature at the bottom of the app where you can look through a player’s career statistics before adding them to your squad.
